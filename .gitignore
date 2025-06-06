@@ -1,0 +1,9 @@
+node_modules
+laudos
+logs
+uploads
+.env
+
+# Certificados digitais
+*.pfx
+*.p12
