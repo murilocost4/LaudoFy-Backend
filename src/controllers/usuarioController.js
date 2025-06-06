@@ -13,7 +13,7 @@ exports.criarUsuario = async (req, res) => {
             return res.status(400).json({ erro: 'Dados inválidos', detalhes: errors.array() });
         }
 
-        const { nome, email, senha, role, crm, isAdminMaster, tenant_id, especialidades } = req.body;
+        const { nome, email, senha, role, crm, isAdminMaster, tenant_id, especialidades, ativo, permissaoFinanceiro } = req.body;
 
         if (!validator.isEmail(email)) {
             return res.status(400).json({ erro: 'Email inválido' });
@@ -59,7 +59,9 @@ exports.criarUsuario = async (req, res) => {
             crm, 
             tenant_id: Array.isArray(req.body.tenant_id) ? req.body.tenant_id : [req.body.tenant_id], 
             isAdminMaster,
-            especialidades: especialidades || []
+            especialidades: especialidades || [],
+            ativo: ativo !== undefined ? ativo : true,
+            permissaoFinanceiro: permissaoFinanceiro !== undefined ? permissaoFinanceiro : false
         });
         
         await usuario.save();
@@ -218,7 +220,7 @@ exports.getUsuario = async (req, res) => {
 // Atualizar um usuário
 exports.atualizarUsuario = async (req, res) => {
     try {
-        const { nome, email, role, senha, crm, isAdminMaster, tenant_id, especialidades } = req.body;
+        const { nome, email, role, senha, crm, isAdminMaster, tenant_id, especialidades, ativo, permissaoFinanceiro } = req.body;
         const usuarioId = req.params.id;
 
         if (!mongoose.Types.ObjectId.isValid(usuarioId)) {
@@ -238,6 +240,8 @@ exports.atualizarUsuario = async (req, res) => {
         if (crm && typeof crm === 'string') usuario.crm = crm.trim();
         if (isAdminMaster !== undefined) usuario.isAdminMaster = isAdminMaster;
         if (especialidades) usuario.especialidades = especialidades;
+        if (ativo !== undefined) usuario.ativo = ativo;
+        if (permissaoFinanceiro !== undefined) usuario.permissaoFinanceiro = permissaoFinanceiro;
 
         // Set tenant_id based on role
         if (role === 'adminMaster') {
@@ -253,21 +257,26 @@ exports.atualizarUsuario = async (req, res) => {
         const usuarioAtualizado = await Usuario.findById(usuarioId)
             .select('-senha -refreshToken -resetSenhaToken');
 
+        // Create audit log before sending response
+        try {
+            await AuditLog.create({
+                userId: req.usuario?._id,
+                action: 'update',
+                description: `Usuário atualizado: ${email || usuario.email}`,
+                collectionName: 'usuarios',
+                documentId: usuario._id,
+                before: null,
+                after: usuarioAtualizado.toObject(),
+                ip: req.ip,
+                userAgent: req.headers['user-agent']
+            });
+        } catch (auditError) {
+            console.error('Erro ao criar log de auditoria:', auditError);
+        }
+
         res.status(200).json({
             mensagem: 'Usuário atualizado com sucesso',
             usuario: usuarioAtualizado
-        });
-
-        await AuditLog.create({
-            userId: req.usuario?._id,
-            action: 'update',
-            description: `Usuário atualizado: ${email || usuario.email}`,
-            collectionName: 'usuarios',
-            documentId: usuario._id,
-            before: null,
-            after: usuarioAtualizado.toObject(),
-            ip: req.ip,
-            userAgent: req.headers['user-agent']
         });
 
     } catch (err) {

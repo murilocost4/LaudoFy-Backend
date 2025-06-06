@@ -134,12 +134,12 @@ router.get('/:id', authMiddleware, tenantMiddleware, exameController.obterExame)
 
 router.get('/:id/download', authMiddleware, tenantMiddleware, exameController.downloadArquivo);
 
-// Rota para atualizar um exame (apenas técnicos e administradores)
+// Rota para atualizar um exame (técnicos, administradores e recepcionistas)
 router.put(
     '/:id',
     authMiddleware,
     tenantMiddleware,
-    autorizacaoMiddleware(['tecnico', 'admin']), // Médicos removidos para atualização
+    autorizacaoMiddleware(['tecnico', 'admin', 'recepcionista']), // Incluindo recepcionista para edição
     debugFormData, // Debug antes do multer
     upload.single('arquivo'), // CORRIGIDO: Usar a configuração do multerConfig
     handleMulterError, // Adicionar tratamento de erro
@@ -153,7 +153,7 @@ router.delete(
     '/:id',
     authMiddleware,
     tenantMiddleware,
-    autorizacaoMiddleware(['admin']),
+    autorizacaoMiddleware(['admin']), // Mantendo apenas admin para exclusão
     exameController.deletarExame
 );
 

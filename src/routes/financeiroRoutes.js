@@ -5,6 +5,7 @@ const financeiroController = require('../controllers/financeiroController');
 const valorLaudoController = require('../controllers/valorLaudoController');
 const authMiddleware = require('../middleware/authMiddleware');
 const {autorizacaoMiddleware, verificarAcessoTenant} = require('../middleware/autorizacaoMiddleware');
+const {verificarPermissaoFinanceiro} = require('../middleware/financeiroMiddleware');
 
 // Todas as rotas precisam de autenticação
 router.use(authMiddleware);
@@ -18,41 +19,48 @@ router.get('/pagamentos/estatisticas',
 // Add this route for listing all payments (AdminMaster only)  
 router.get('/pagamentos',
   autorizacaoMiddleware(['adminMaster', 'admin']),
+  verificarPermissaoFinanceiro,
   financeiroController.listarPagamentos
 );
 
 // Rotas com verificação de tenant
 router.get('/laudos-medico', 
   verificarAcessoTenant,
+  verificarPermissaoFinanceiro,
   financeiroController.listarLaudosPorMedico
 );
 
 router.post('/pagamentos',
   verificarAcessoTenant,
+  verificarPermissaoFinanceiro,
   financeiroController.registrarPagamento
 );
 
 // Dashboard financeiro
 router.get('/dashboard', 
   autorizacaoMiddleware(['adminMaster', 'admin']),
+  verificarPermissaoFinanceiro,
   financeiroController.dashboardFinanceiro
 );
 
 // Relatórios financeiros
 router.get('/relatorios', 
   autorizacaoMiddleware(['adminMaster', 'admin']),
+  verificarPermissaoFinanceiro,
   financeiroController.relatorioFinanceiro
 );
 
 // Relatório por médico
 router.get('/relatorios/medicos', 
   autorizacaoMiddleware(['adminMaster', 'admin']),
+  verificarPermissaoFinanceiro,
   financeiroController.relatorioPorMedico
 );
 
 // Relatório por tipo de exame
 router.get('/relatorios/tipos-exame', 
   autorizacaoMiddleware(['adminMaster', 'admin']),
+  verificarPermissaoFinanceiro,
   financeiroController.relatorioPorTipoExame
 );
 

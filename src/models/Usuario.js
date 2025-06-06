@@ -49,6 +49,14 @@ const UsuarioSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    ativo: {
+        type: Boolean,
+        default: true
+    },
+    permissaoFinanceiro: {
+        type: Boolean,
+        default: false
+    },
 }, { 
     timestamps: true,
     toJSON: { getters: true, virtuals: true },

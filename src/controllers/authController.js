@@ -23,7 +23,9 @@ const gerarTokens = (usuario) => {
         tenant_id: usuario.tenant_id,
         isAdminMaster: usuario.isAdminMaster,
         papeis: usuario.papeis,
-        permissoes: usuario.permissoes
+        permissoes: usuario.permissoes,
+        permissaoFinanceiro: usuario.permissaoFinanceiro,
+        ativo: usuario.ativo
       },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
@@ -138,6 +140,11 @@ exports.login = async (req, res) => {
             return res.status(401).json({ erro: 'Credenciais inválidas' });
         }
 
+        // Verificar se o usuário está ativo
+        if (!usuario.ativo) {
+            return res.status(401).json({ erro: 'Usuário inativo. Entre em contato com o administrador.' });
+        }
+
         const nomeDescriptografado = usuario.nome;
 
         const accessTokenPayload = {
@@ -147,7 +154,9 @@ exports.login = async (req, res) => {
             role: usuario.role,
             tenant_id: usuario.tenant_id,
             especialidades: usuario.especialidades,
-            isAdminMaster: usuario.isAdminMaster
+            isAdminMaster: usuario.isAdminMaster,
+            permissaoFinanceiro: usuario.permissaoFinanceiro,
+            ativo: usuario.ativo
         };
 
         const refreshTokenPayload = {
@@ -235,7 +244,8 @@ exports.refreshToken = async (req, res) => {
             role: usuario.role,
             tenant_id: usuario.tenant_id,
             especialidades: usuario.especialidades,
-            isAdminMaster: usuario.isAdminMaster
+            isAdminMaster: usuario.isAdminMaster,
+            permissaoFinanceiro: usuario.permissaoFinanceiro
         };
 
         const newAccessToken = jwt.sign(newAccessTokenPayload, process.env.JWT_SECRET, { expiresIn: '1h' });

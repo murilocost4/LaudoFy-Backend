@@ -25,7 +25,8 @@ const authMiddleware = async (req, res, next) => {
       nome: decoded.nome, // **Nome já deve estar descriptografado**
       role: decoded.role,
       tenant_id: decoded.tenant_id,
-      especialidades: decoded.especialidades
+      especialidades: decoded.especialidades,
+      ativo: decoded.ativo
     });
 
     // **CORRIGIDO: Extrair apenas os IDs dos tenants**
@@ -44,8 +45,10 @@ const authMiddleware = async (req, res, next) => {
       nome: decoded.nome, // **Nome descriptografado do token**
       role: decoded.role,
       isAdminMaster: decoded.isAdminMaster || false,
+      permissaoFinanceiro: decoded.permissaoFinanceiro || false,
       tenant_id: tenantIds,
-      especialidades: decoded.especialidades || []
+      especialidades: decoded.especialidades || [],
+      ativo: decoded.ativo !== false // **Default para true se não definido**
     };
 
     req.usuarioNome = decoded.nome; // **Nome descriptografado**
