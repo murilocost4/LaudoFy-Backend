@@ -115,6 +115,7 @@ router.get('/laudos/:path(*)/download', (req, res) => {
   });
 
 router.get('/publico/:id', laudoController.visualizarLaudoPublico);
+router.get('/publico/:id/pdf', laudoController.gerarPdfLaudoPublico);
 router.post('/publico/:id/auth', laudoController.autenticarLaudoPublico);
 
 router.patch('/laudos/:id/invalidar', authMiddleware, tenantMiddleware, laudoController.invalidarLaudo);

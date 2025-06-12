@@ -149,7 +149,7 @@ const obterLaudoPorId = async (laudoId) => {
   return laudoJson;
 };
 
-// Define default styles if none are provided
+// Define default styles if none are provided - OTIMIZADO PARA UMA PÁGINA
 const defaultStyles = {
   colors: {
     primary: '#334155',    // Slate 700 - mais escuro
@@ -170,23 +170,23 @@ const defaultStyles = {
     left: 40,
     right: 40,
     headerRight: 40,
-    top: 40,
-    bottom: 40
+    top: 30,        // Reduzido
+    bottom: 30      // Reduzido
   },
   fonts: {
-    small: 9,
-    normal: 11,
-    label: 10,
-    title: 18,
-    section: 14,
-    large: 16
+    small: 8,       // Reduzido
+    normal: 10,     // Reduzido
+    label: 9,       // Reduzido
+    title: 16,      // Reduzido
+    section: 12,    // Reduzido
+    large: 14       // Reduzido
   },
   spacing: {
-    section: 25,
-    paragraph: 15,
-    line: 8,
-    header: 20,
-    element: 12
+    section: 18,    // Reduzido
+    paragraph: 12,  // Reduzido
+    line: 6,        // Reduzido
+    header: 15,     // Reduzido
+    element: 10     // Reduzido
   }
 };
 
@@ -496,6 +496,15 @@ async function gerarConteudoPdfLaudo(doc, laudo, exame, usuarioMedico, medicoNom
     }
   });
 
+  // Adicionar link público e QR code de forma discreta no final da página
+  if (publicLink && publicLink.trim() !== '') {
+    // Guardar o QR code e link para adicionar no final
+    doc._publicLinkInfo = {
+      link: publicLink,
+      shouldAdd: true
+    };
+  }
+
   return currentY;
 }
 
@@ -567,28 +576,31 @@ function adicionarTextoVerificacaoFinal(doc, styles) {
   return textoY;
 }
 
-// Função para adicionar área de assinatura médica - VERSÃO FINAL
-function adicionarAreaAssinaturaMedica(doc, medicoNome, usuarioMedico, currentY, assinadoDigitalmente = false, dataAssinatura = null, certificadoInfo = null) {
+// Função para adicionar área de assinatura médica - VERSÃO OTIMIZADA PARA UMA PÁGINA
+async function adicionarAreaAssinaturaMedica(doc, medicoNome, usuarioMedico, currentY, assinadoDigitalmente = false, dataAssinatura = null, certificadoInfo = null) {
   const styles = defaultStyles;
-  const margemInferior = 140; // Aumentado para deixar espaço para o texto de verificação
   const pageWidth = doc.page.width;
   const pageHeight = doc.page.height;
+  const centerX = pageWidth / 2;
   
-  // Verificar se há espaço na página atual (reservar 180px para assinatura e texto final)
-  if (currentY > pageHeight - 180) {
+  // Calcular espaço necessário para assinatura + link público + margem
+  const espacoNecessario = 120; // Reduzido para otimizar espaço
+  
+  // Verificar se há espaço na página atual
+  if (currentY > pageHeight - espacoNecessario) {
     doc.addPage();
     currentY = styles.margins.top;
   }
   
-  const assinaturaY = pageHeight - margemInferior;
-  const centerX = pageWidth / 2;
+  // Posição da assinatura (mais alta para deixar espaço para link público)
+  const assinaturaY = pageHeight - 90; // Reduzido para otimizar espaço
   
-  // Se assinado digitalmente, adicionar selo integrado com ICP-BRASIL
+  // Se assinado digitalmente, adicionar selo compacto
   if (assinadoDigitalmente) {
-    const seloWidth = 280;
-    const seloHeight = 45;
+    const seloWidth = 260; // Reduzido
+    const seloHeight = 35; // Reduzido
     const seloX = centerX - (seloWidth / 2);
-    const seloY = assinaturaY - 85; // Ajustado para ficar mais alto
+    const seloY = assinaturaY - 65; // Ajustado para ficar mais compacto
     
     // Fundo do selo
     doc.fillColor('#f8fafc')
@@ -597,101 +609,148 @@ function adicionarAreaAssinaturaMedica(doc, medicoNome, usuarioMedico, currentY,
     
     // Borda do selo
     doc.strokeColor('#334155')
-      .lineWidth(1.5)
+      .lineWidth(1)
       .rect(seloX, seloY, seloWidth, seloHeight)
       .stroke();
     
     // Linha de destaque superior do selo
     doc.fillColor('#475569')
-      .rect(seloX, seloY, seloWidth, 3)
+      .rect(seloX, seloY, seloWidth, 2)
       .fill();
     
     // Ícone de verificação (círculo com check)
-    const iconX = seloX + 15;
-    const iconY = seloY + 22;
+    const iconX = seloX + 12;
+    const iconY = seloY + 18;
     
     doc.fillColor('#334155')
-      .circle(iconX, iconY, 8)
+      .circle(iconX, iconY, 6)
       .fill();
     
     doc.strokeColor('#ffffff')
-      .lineWidth(2)
-      .moveTo(iconX - 4, iconY)
-      .lineTo(iconX - 1, iconY + 3)
-      .lineTo(iconX + 4, iconY - 3)
+      .lineWidth(1.5)
+      .moveTo(iconX - 3, iconY)
+      .lineTo(iconX - 1, iconY + 2)
+      .lineTo(iconX + 3, iconY - 2)
       .stroke();
     
-    // Texto principal do selo
+    // Texto principal do selo (compacto)
     doc.fillColor('#334155')
       .font('Helvetica-Bold')
-      .fontSize(11)
-      .text('ASSINADO DIGITALMENTE', iconX + 20, seloY + 8);
+      .fontSize(9)
+      .text('ASSINADO DIGITALMENTE', iconX + 15, seloY + 6);
     
-    // Data/hora da assinatura
+    // Data/hora da assinatura (compacta)
     const dataFormatada = dataAssinatura ? 
       new Date(dataAssinatura).toLocaleString('pt-BR') : 
       new Date().toLocaleString('pt-BR');
     
     doc.fillColor('#475569')
       .font('Helvetica')
-      .fontSize(9)
-      .text(`${medicoNome} - ${dataFormatada}`, iconX + 20, seloY + 23);
+      .fontSize(7)
+      .text(`${medicoNome} - ${dataFormatada}`, iconX + 15, seloY + 18);
     
-    // ICP-BRASIL integrado no lado direito do selo
-    const icpX = seloX + seloWidth - 70;
-    const icpY = seloY + 10;
+    // ICP-BRASIL integrado no lado direito do selo (compacto)
+    const icpX = seloX + seloWidth - 55;
+    const icpY = seloY + 8;
     
-    // Fundo para ICP-BRASIL
     doc.fillColor('#e2e8f0')
-      .rect(icpX, icpY, 60, 25)
+      .rect(icpX, icpY, 50, 20)
       .fill();
     
     doc.strokeColor('#cbd5e1')
       .lineWidth(0.5)
-      .rect(icpX, icpY, 60, 25)
+      .rect(icpX, icpY, 50, 20)
       .stroke();
     
-    // Texto ICP-BRASIL
     doc.fillColor('#475569')
       .font('Helvetica-Bold')
-      .fontSize(7)
-      .text('ICP-BRASIL', icpX + 5, icpY + 5, { align: 'left' });
+      .fontSize(6)
+      .text('ICP-BRASIL', icpX + 3, icpY + 3, { align: 'left' });
     
     doc.fillColor('#64748b')
       .font('Helvetica')
-      .fontSize(6)
-      .text('CERT. DIGITAL', icpX + 5, icpY + 15, { align: 'left' });
+      .fontSize(5)
+      .text('CERT. DIGITAL', icpX + 3, icpY + 12, { align: 'left' });
     
   } else {
-    // Linha para assinatura física - centralizada
-    const linhaWidth = 250;
+    // Linha para assinatura física - centralizada e compacta
+    const linhaWidth = 200; // Reduzida
     const linhaX = centerX - (linhaWidth / 2);
     
     doc.strokeColor(styles.colors.dark)
       .lineWidth(1)
-      .moveTo(linhaX, assinaturaY - 30) // Ajustado para ficar mais alto
-      .lineTo(linhaX + linhaWidth, assinaturaY - 30)
+      .moveTo(linhaX, assinaturaY - 35)
+      .lineTo(linhaX + linhaWidth, assinaturaY - 35)
       .stroke();
   }
   
-  // Nome do médico - centralizado
+  // Nome do médico - centralizado e compacto
   doc.fillColor(styles.colors.dark)
     .font('Helvetica-Bold')
-    .fontSize(12)
-    .text(medicoNome || 'Médico Responsável', 0, assinaturaY - 20, { // Ajustado para ficar mais alto
+    .fontSize(11) // Reduzido
+    .text(medicoNome || 'Médico Responsável', 0, assinaturaY - 25, {
       width: pageWidth,
       align: 'center'
     });
   
-  // CRM do médico - centralizado
+  // CRM do médico - centralizado e compacto
   if (usuarioMedico?.crm) {
     doc.fillColor(styles.colors.text)
       .font('Helvetica')
-      .fontSize(10)
-      .text(`CRM: ${usuarioMedico.crm}`, 0, assinaturaY - 5, { // Ajustado para ficar mais alto
+      .fontSize(9) // Reduzido
+      .text(`CRM: ${usuarioMedico.crm}`, 0, assinaturaY - 12, {
         width: pageWidth,
         align: 'center'
       });
+  }
+  
+  // Adicionar link público e QR code discretos na parte inferior
+  if (doc._publicLinkInfo && doc._publicLinkInfo.shouldAdd && doc._publicLinkInfo.link) {
+    const linkPublico = doc._publicLinkInfo.link;
+    const bottomY = pageHeight - 35; // Posição na parte inferior da página
+    
+    try {
+      // Gerar QR code pequeno e discreto
+      const QRCode = require('qrcode');
+      const qrCodeDataURL = await QRCode.toDataURL(linkPublico, {
+        width: 40, // Muito pequeno e discreto
+        margin: 1,
+        color: {
+          dark: '#666666',
+          light: '#FFFFFF'
+        }
+      });
+      
+      // Converter data URL para buffer
+      const qrCodeBuffer = Buffer.from(qrCodeDataURL.split(',')[1], 'base64');
+      
+      // Posicionar QR code pequeno no canto direito
+      const qrX = pageWidth - 50;
+      const qrY = bottomY - 20;
+      
+      doc.image(qrCodeBuffer, qrX, qrY, { width: 30, height: 30 });
+      
+      // Link público discreto ao lado do QR code
+      doc.fillColor('#888888')
+        .font('Helvetica')
+        .fontSize(6)
+        .text('Acesso público:', styles.margins.left, bottomY - 22)
+        .text(linkPublico, styles.margins.left, bottomY - 13, {
+          width: pageWidth - 70, // Deixar espaço para o QR code
+          link: linkPublico
+        });
+        
+    } catch (qrError) {
+      console.error('Erro ao gerar QR Code:', qrError);
+      // Se não conseguir gerar QR code, apenas adicionar o link
+      doc.fillColor('#888888')
+        .font('Helvetica')
+        .fontSize(6)
+        .text(`Acesso público: ${linkPublico}`, styles.margins.left, bottomY - 10, {
+          width: pageWidth - styles.margins.left - styles.margins.right,
+          link: linkPublico
+        });
+    }
   }
   
   return assinaturaY;
@@ -711,6 +770,9 @@ exports.gerarPdfLaudoAssinado = async (laudoId, exame, tipoExame, medicoNome, me
     const doc = new PDFDocument({ size: 'A4', margin: 30, bufferPages: true });
     doc.on('data', chunk => pdfBuffers.push(chunk));
 
+    // Gerar link público para o laudo
+    const publicLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/publico/${laudoId}`;
+
     // Gerar conteúdo do PDF usando dados descriptografados
     const currentY = await gerarConteudoPdfLaudo(
       doc, 
@@ -719,7 +781,7 @@ exports.gerarPdfLaudoAssinado = async (laudoId, exame, tipoExame, medicoNome, me
       usuarioMedico, 
       medicoNome, 
       conclusao, 
-      '', 
+      publicLink, 
       defaultStyles
     );
 
@@ -735,10 +797,7 @@ exports.gerarPdfLaudoAssinado = async (laudoId, exame, tipoExame, medicoNome, me
     }
 
     // Adicionar área de assinatura no final do documento
-    adicionarAreaAssinaturaMedica(doc, medicoNome, usuarioMedico, currentY, true, new Date(), certificadoInfo);
-
-    // Adicionar texto de verificação no final do documento (separadamente)
-    adicionarTextoVerificacaoFinal(doc, defaultStyles);
+    await adicionarAreaAssinaturaMedica(doc, medicoNome, usuarioMedico, currentY, true, new Date(), certificadoInfo);
 
     await new Promise((resolve, reject) => {
       doc.on('end', resolve);
@@ -1051,6 +1110,9 @@ exports.criarLaudo = async (req, res) => {
       
       doc.on('data', chunk => pdfBuffers.push(chunk));
 
+      // Gerar link público para o laudo original
+      const publicLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/publico/${laudo._id}`;
+
       // Gerar conteúdo do PDF
       await gerarConteudoPdfLaudo(
         doc, 
@@ -1059,12 +1121,12 @@ exports.criarLaudo = async (req, res) => {
         usuarioMedico, 
         usuarioNome, 
         laudoCompleto.conclusao, 
-        '', 
+        publicLink, 
         defaultStyles
       );
 
       // Adicionar área de assinatura FÍSICA (com linha) para o laudo original
-      adicionarAreaAssinaturaMedica(
+      await adicionarAreaAssinaturaMedica(
         doc, 
         usuarioNome, 
         usuarioMedico, 
@@ -1861,6 +1923,9 @@ exports.downloadLaudoOriginal = async (req, res) => {
       
       doc.on('data', chunk => pdfBuffers.push(chunk));
 
+      // Gerar link público para o laudo
+      const publicLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/publico/${id}`;
+
       // Gerar conteúdo do PDF
       const currentY = await gerarConteudoPdfLaudo(
         doc, 
@@ -1869,12 +1934,12 @@ exports.downloadLaudoOriginal = async (req, res) => {
         usuarioMedico, 
         medicoNome, 
         laudoCompleto.conclusao, 
-        '', 
+        publicLink, 
         defaultStyles
       );
 
       // Adicionar área de assinatura FÍSICA (com linha) para o laudo original
-      adicionarAreaAssinaturaMedica(
+      await adicionarAreaAssinaturaMedica(
         doc, 
         medicoNome, 
         usuarioMedico, 
@@ -2065,17 +2130,148 @@ exports.enviarEmailLaudo = async (req, res) => {
 // Visualizar laudo público
 exports.visualizarLaudoPublico = async (req, res) => {
   try {
-    res.status(501).json({ erro: 'Função não implementada neste exemplo' });
+    const { id } = req.params;
+    
+    const laudoCompleto = await obterLaudoPorId(id);
+    if (!laudoCompleto) {
+      return res.status(404).json({ erro: 'Laudo não encontrado' });
+    }
+
+    // Retornar dados formatados para visualização pública
+    const laudoPublico = {
+      id: laudoCompleto._id,
+      codigoValidacao: laudoCompleto._id.toString().slice(-8).toUpperCase(),
+      versao: laudoCompleto.versao,
+      status: laudoCompleto.status === 'Laudo assinado' ? 'ativo' : 'inativo',
+      dataEmissao: laudoCompleto.createdAt,
+      temPdfAssinado: !!laudoCompleto.laudoAssinado || !!laudoCompleto.laudoAssinadoKey,
+      // Informações sobre o tipo de assinatura
+      assinadoDigitalmente: laudoCompleto.assinadoDigitalmente || false,
+      assinadoCom: laudoCompleto.assinadoCom || 'sem_assinatura',
+      dataAssinatura: laudoCompleto.dataAssinatura,
+      paciente: {
+        nome: laudoCompleto.exame?.paciente?.nome || 'Não informado',
+        idade: laudoCompleto.exame?.paciente?.dataNascimento ? 
+          calcularIdade(laudoCompleto.exame.paciente.dataNascimento) : null,
+        dataNascimento: laudoCompleto.exame?.paciente?.dataNascimento
+      },
+      exame: {
+        tipo: laudoCompleto.exame?.tipoExame?.nome || 'Não informado',
+        data: laudoCompleto.exame?.dataExame
+      },
+      conclusao: laudoCompleto.conclusao,
+      medico: laudoCompleto.medicoResponsavel || 'Médico não informado'
+    };
+
+    res.json(laudoPublico);
   } catch (err) {
     logger.error('Erro ao visualizar laudo público:', err);
     res.status(500).json({ erro: 'Erro ao visualizar laudo público' });
   }
 };
 
-// Autenticar laudo público
+// Gerar PDF público do laudo
+exports.gerarPdfLaudoPublico = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const laudoCompleto = await obterLaudoPorId(id);
+    if (!laudoCompleto) {
+      return res.status(404).json({ erro: 'Laudo não encontrado' });
+    }
+
+    // Verificar se laudo tem PDF assinado
+    if (laudoCompleto.laudoAssinadoKey || laudoCompleto.laudoAssinado) {
+      // Se tem S3 key, buscar do S3
+      if (laudoCompleto.laudoAssinadoKey) {
+        const { getSignedUrlForLaudo } = require('../services/laudoStorageService');
+        try {
+          const signedUrl = await getSignedUrlForLaudo(laudoCompleto.laudoAssinadoKey);
+          return res.redirect(signedUrl);
+        } catch (error) {
+          console.error('Erro ao obter URL assinada do S3:', error);
+        }
+      }
+      
+      // Fallback para URL do UploadCare (legado)
+      if (laudoCompleto.laudoAssinado) {
+        return res.redirect(laudoCompleto.laudoAssinado);
+      }
+    }
+
+    // Se não tem PDF assinado, gerar PDF dinâmico com link público e QR code
+    const PDFDocument = require('pdfkit');
+    const QRCode = require('qrcode');
+    
+    const doc = new PDFDocument({
+      size: 'A4',
+      margins: { top: 40, bottom: 40, left: 40, right: 40 }
+    });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="laudo_${laudoCompleto._id}.pdf"`);
+    
+    doc.pipe(res);
+
+    const pdfBuffers = [];
+    doc.on('data', chunk => pdfBuffers.push(chunk));
+
+    // Gerar link público
+    const publicLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/publico/${id}`;
+    
+    // Gerar QR Code
+    let qrCodeDataUrl;
+    try {
+      qrCodeDataUrl = await QRCode.toDataURL(publicLink, {
+        width: 150,
+        margin: 1,
+        color: {
+          dark: '#000000',
+          light: '#FFFFFF'
+        }
+      });
+    } catch (qrError) {
+      console.error('Erro ao gerar QR Code:', qrError);
+    }
+
+    // Gerar conteúdo do PDF
+    const usuarioMedico = await Usuario.findById(laudoCompleto.medicoResponsavelId);
+    
+    await gerarConteudoPdfLaudo(
+      doc, 
+      laudoCompleto, 
+      laudoCompleto.exame, 
+      usuarioMedico, 
+      laudoCompleto.medicoResponsavel, 
+      laudoCompleto.conclusao, 
+      publicLink, 
+      defaultStyles
+    );
+
+    // Adicionar área de assinatura física (o link público será adicionado discretamente pela função)
+    const currentY = doc.y + 20; // Reduzido o espaçamento
+    await adicionarAreaAssinaturaMedica(
+      doc, 
+      laudoCompleto.medicoResponsavel, 
+      usuarioMedico, 
+      currentY, 
+      false, // Não assinado digitalmente - mostra linha para assinatura física
+      null,
+      null
+    );
+
+    doc.end();
+
+  } catch (err) {
+    logger.error('Erro ao gerar PDF público:', err);
+    res.status(500).json({ erro: 'Erro ao gerar PDF público' });
+  }
+};
+
+// Autenticar laudo público (removido - não é mais necessário)
 exports.autenticarLaudoPublico = async (req, res) => {
   try {
-    res.status(501).json({ erro: 'Função não implementada neste exemplo' });
+    res.status(410).json({ erro: 'Autenticação não é mais necessária. O laudo é público.' });
   } catch (err) {
     logger.error('Erro ao autenticar laudo público:', err);
     res.status(500).json({ erro: 'Erro ao autenticar laudo público' });
@@ -2569,8 +2765,11 @@ exports.assinarLaudoComCertificado = async (laudoId, medicoId, senhaCertificado)
          align: 'center'
        });
 
+    // Gerar link público para o laudo
+    const publicLink = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/publico/${laudoId}`;
+
     // Gerar conteúdo do PDF usando dados descriptografados
-    await gerarConteudoPdfLaudo(doc, laudoCompleto, laudoCompleto.exame, usuarioMedico, medicoNome, laudoCompleto.conclusao, '', defaultStyles);
+    await gerarConteudoPdfLaudo(doc, laudoCompleto, laudoCompleto.exame, usuarioMedico, medicoNome, laudoCompleto.conclusao, publicLink, defaultStyles);
 
     await new Promise((resolve, reject) => {
       doc.on('end', resolve);
