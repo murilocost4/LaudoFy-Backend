@@ -28,12 +28,9 @@ const verificarAcessoTenant = (req, res, next) => {
         if (req.query['tenant_id[_id]']) {
             // Extract the _id from the object structure
             requestTenantId = req.query['tenant_id[_id]'];
-            console.log('DEBUG: Extracted tenant_id from object structure:', requestTenantId);
         }
         
-        // Debug log to understand the data structure
         if (requestTenantId && typeof requestTenantId === 'string' && (requestTenantId.startsWith('[') || requestTenantId.includes('ObjectId'))) {
-            console.log('DEBUG: Processing tenant_id string:', requestTenantId);
         }
         
         // Handle tenant ID as array in request
@@ -42,7 +39,6 @@ const verificarAcessoTenant = (req, res, next) => {
                 const parsed = JSON.parse(requestTenantId);
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     requestTenantId = parsed[0];
-                    console.log('DEBUG: Successfully parsed tenant_id array, using:', requestTenantId);
                 } else {
                     console.error('Parsed tenant_id is not a valid array:', requestTenantId);
                     requestTenantId = null;

@@ -65,47 +65,7 @@ const handleMulterError = (err, req, res, next) => {
     next();
 };
 
-// Middleware personalizado para debug
-const debugUpload = (req, res, next) => {
-    console.log('=== DEBUG UPLOAD ===');
-    console.log('Content-Type:', req.headers['content-type']);
-    console.log('Body keys:', Object.keys(req.body || {}));
-    console.log('File:', req.file ? {
-        fieldname: req.file.fieldname,
-        originalname: req.file.originalname,
-        mimetype: req.file.mimetype,
-        size: req.file.size
-    } : 'Nenhum arquivo');
-    
-    // Log detalhado dos campos do body
-    if (req.body) {
-        console.log('Body fields:');
-        Object.entries(req.body).forEach(([key, value]) => {
-            console.log(`  ${key}: ${typeof value === 'string' ? value.substring(0, 100) : value}`);
-        });
-    }
-    
-    next();
-};
 
-// Middleware para verificar FormData antes do multer
-const debugFormData = (req, res, next) => {
-    console.log('=== DEBUG FORM DATA ===');
-    console.log('Headers:', {
-        'content-type': req.headers['content-type'],
-        'content-length': req.headers['content-length']
-    });
-    
-    // Verificar se é multipart/form-data
-    if (!req.headers['content-type'] || !req.headers['content-type'].includes('multipart/form-data')) {
-        return res.status(400).json({ 
-            erro: 'Content-Type deve ser multipart/form-data',
-            codigo: 'INVALID_CONTENT_TYPE'
-        });
-    }
-    
-    next();
-};
 
 // Rota para criar um exame (apenas técnicos e administradores)
 router.post(
@@ -113,10 +73,8 @@ router.post(
     authMiddleware,
     tenantMiddleware,
     autorizacaoMiddleware(['tecnico', 'admin', 'recepcionista']), // Médicos removidos para criação
-    debugFormData, // Debug antes do multer
     s3Upload.single('arquivo'), // NOVO: Usar S3 upload
     handleMulterError, // Adicionar tratamento de erro
-    debugUpload, // Debug middleware
     exameController.validarExame,
     exameController.criarExame
 );
@@ -141,10 +99,8 @@ router.put(
     authMiddleware,
     tenantMiddleware,
     autorizacaoMiddleware(['tecnico', 'admin', 'recepcionista']), // Incluindo recepcionista para edição
-    debugFormData, // Debug antes do multer
     s3Upload.single('arquivo'), // NOVO: Usar S3 upload
     handleMulterError, // Adicionar tratamento de erro
-    debugUpload, // Debug middleware
     exameController.validarExame,
     exameController.atualizarExame
 );
@@ -163,10 +119,8 @@ router.post('/upload',
     authMiddleware,
     tenantMiddleware,
     autorizacaoMiddleware(['tecnico', 'admin', 'recepcionista']),
-    debugFormData,
     s3Upload.single('arquivo'), // NOVO: Usar S3 upload
     handleMulterError,
-    debugUpload,
     exameController.uploadExame
 );
 
