@@ -20,7 +20,6 @@ router.get('/pagamentos/estatisticas',
 router.get('/pagamentos',
   authMiddleware,
   verificarAcessoTenant,
-  verificarPermissaoFinanceiro,
   (req, res, next) => {
     // Only apply financial permission check for admin roles, not for medical professionals
     if (req.usuario.role === 'medico') {

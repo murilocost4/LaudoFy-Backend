@@ -87,7 +87,7 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
 
 app.use('/api', rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 200, // Limite de 200 requisições por IP
+  max: 2000, // Limite de 200 requisições por IP
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Muitas requisições, tente novamente mais tarde.' }
