@@ -36,9 +36,13 @@ const authMiddleware = async (req, res, next) => {
       _id: decoded.id, // Adicionar _id para compatibilidade
       nome: decoded.nome, // **Nome descriptografado do token**
       role: decoded.role,
+      roles: decoded.roles || [], // Roles adicionais
+      todasRoles: decoded.todasRoles || [decoded.role], // Todas as roles
       isAdminMaster: decoded.isAdminMaster || false,
       permissaoFinanceiro: decoded.permissaoFinanceiro || false,
       tenant_id: tenantIds,
+      admin_tenants: decoded.admin_tenants || [], // Tenants onde é admin
+      tenantsAdmin: decoded.tenantsAdmin || [], // Virtual para tenants admin
       especialidades: decoded.especialidades || [],
       ativo: decoded.ativo !== false // **Default para true se não definido**
     };
@@ -57,14 +61,123 @@ const authMiddleware = async (req, res, next) => {
   }
 };
 
-// Middleware de autorização por role
-exports.verificarRole = (rolesPermitidos) => {
+module.exports = authMiddleware;
+
+// Exportar as funções auxiliares
+module.exports.verificarRole = (rolesPermitidos) => {
   return (req, res, next) => {
-    if (!rolesPermitidos.includes(req.usuario.role)) {
+    // Converter para array se não for
+    if (!Array.isArray(rolesPermitidos)) {
+      rolesPermitidos = [rolesPermitidos];
+    }
+    
+    // Verificar se o usuário tem pelo menos uma das roles permitidas
+    const temPermissao = rolesPermitidos.some(rolePermitida => {
+      // Verificar role principal
+      if (req.usuario.role === rolePermitida) return true;
+      
+      // Verificar roles adicionais
+      if (req.usuario.roles && req.usuario.roles.includes(rolePermitida)) return true;
+      
+      // Verificar todas as roles (incluindo AdminMaster)
+      if (req.usuario.todasRoles && req.usuario.todasRoles.includes(rolePermitida)) return true;
+      
+      return false;
+    });
+    
+    if (!temPermissao) {
       return res.status(403).json({ erro: 'Acesso negado' });
     }
     next();
   };
 };
 
-module.exports = authMiddleware;
+// Novo middleware para verificar se tem role específica
+module.exports.verificarRoleEspecifica = (roleEspecifica) => {
+  return (req, res, next) => {
+    const todasRoles = req.usuario.todasRoles || [req.usuario.role];
+    
+    if (!todasRoles.includes(roleEspecifica)) {
+      return res.status(403).json({ erro: `Acesso negado. Role '${roleEspecifica}' necessária.` });
+    }
+    next();
+  };
+};
+
+// Middleware para verificar se tem TODAS as roles especificadas
+module.exports.verificarTodasRoles = (rolesNecessarias) => {
+  return (req, res, next) => {
+    if (!Array.isArray(rolesNecessarias)) {
+      rolesNecessarias = [rolesNecessarias];
+    }
+    
+    const todasRoles = req.usuario.todasRoles || [req.usuario.role];
+    const temTodasRoles = rolesNecessarias.every(role => todasRoles.includes(role));
+    
+    if (!temTodasRoles) {
+      return res.status(403).json({ erro: `Acesso negado. Roles necessárias: ${rolesNecessarias.join(', ')}` });
+    }
+    next();
+  };
+};
+
+// Middleware para verificar se o usuário é admin de um tenant específico
+module.exports.verificarAdminTenant = (req, res, next) => {
+  try {
+    const tenantId = req.params.tenantId || req.body.tenantId || req.query.tenantId;
+    
+    if (!tenantId) {
+      return res.status(400).json({ erro: 'Tenant ID é obrigatório' });
+    }
+
+    // AdminMaster tem acesso a tudo
+    if (req.usuario.isAdminMaster) {
+      return next();
+    }
+
+    // Verificar se o usuário tem role de admin
+    const todasRoles = req.usuario.todasRoles || [req.usuario.role];
+    if (!todasRoles.includes('admin')) {
+      return res.status(403).json({ erro: 'Acesso negado. Role de admin necessária.' });
+    }
+
+    // Verificar se o usuário é admin deste tenant específico
+    const adminTenants = req.usuario.admin_tenants || [];
+    const isAdminDoTenant = adminTenants.some(adminTenant => 
+      adminTenant.toString() === tenantId.toString()
+    );
+
+    if (!isAdminDoTenant) {
+      return res.status(403).json({ erro: 'Acesso negado. Você não é admin deste tenant.' });
+    }
+
+    next();
+  } catch (err) {
+    return res.status(500).json({ erro: 'Erro ao verificar permissões de tenant' });
+  }
+};
+
+// Middleware para filtrar dados baseado nos tenants que o usuário administra
+module.exports.filtrarPorTenantsAdmin = (req, res, next) => {
+  try {
+    // AdminMaster tem acesso a todos os tenants
+    if (req.usuario.isAdminMaster) {
+      req.tenantsPermitidos = req.tenant_id;
+      return next();
+    }
+
+    // Para usuários com role admin, filtrar pelos tenants que administram
+    const todasRoles = req.usuario.todasRoles || [req.usuario.role];
+    if (todasRoles.includes('admin')) {
+      const adminTenants = req.usuario.admin_tenants || [];
+      req.tenantsPermitidos = adminTenants;
+    } else {
+      // Para outros usuários, usar todos os tenants que têm acesso
+      req.tenantsPermitidos = req.tenant_id;
+    }
+
+    next();
+  } catch (err) {
+    return res.status(500).json({ erro: 'Erro ao filtrar tenants' });
+  }
+};

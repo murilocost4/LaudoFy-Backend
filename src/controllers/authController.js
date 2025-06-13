@@ -150,7 +150,11 @@ exports.login = async (req, res) => {
             nome: nomeDescriptografado,
             email: usuario.email,
             role: usuario.role,
+            roles: usuario.roles || [], // Roles adicionais
+            todasRoles: usuario.todasRoles, // Todas as roles (virtual)
             tenant_id: usuario.tenant_id,
+            admin_tenants: usuario.admin_tenants || [], // Tenants onde é admin
+            tenantsAdmin: usuario.getTenantsAdmin(), // Virtual para tenants admin
             especialidades: usuario.especialidades,
             isAdminMaster: usuario.isAdminMaster,
             permissaoFinanceiro: usuario.permissaoFinanceiro,

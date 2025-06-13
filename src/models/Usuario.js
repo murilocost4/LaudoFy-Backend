@@ -25,6 +25,12 @@ const UsuarioSchema = new mongoose.Schema({
         enum: ['medico', 'tecnico', 'admin', 'adminMaster', 'recepcionista'],
         default: 'tecnico',
     },
+    // Array de roles adicionais - permite múltiplas permissões
+    roles: {
+        type: [String],
+        enum: ['medico', 'tecnico', 'admin', 'adminMaster', 'recepcionista'],
+        default: []
+    },
     crm: {
         type: String,
         set: v => v ? encrypt(v.trim()) : v,
@@ -43,6 +49,8 @@ const UsuarioSchema = new mongoose.Schema({
     },
     ultimoResetSenha: Date,
     tenant_id: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' }],
+    // Tenants onde o usuário tem privilégios de admin
+    admin_tenants: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tenant' }],
     papeis: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Papel' }],
     especialidades: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Especialidade' }],
     isAdminMaster: {
@@ -95,6 +103,18 @@ UsuarioSchema.methods.toJSON = function() {
         }
     }
     
+    // Adicionar informações de roles
+    obj.todasRoles = this.todasRoles;
+    obj.rolesPrincipais = {
+        principal: this.role,
+        adicionais: this.roles || [],
+        todas: this.todasRoles
+    };
+    
+    // Adicionar informações de tenants admin
+    obj.tenantsAdmin = this.getTenantsAdmin();
+    obj.isAdminDoTenant = (tenantId) => this.isAdminDoTenant(tenantId);
+    
     return obj;
 };
 
@@ -135,6 +155,122 @@ UsuarioSchema.methods.incrementarTentativaReset = async function() {
         this.resetSenhaExpira = undefined;
     }
     await this.save();
+};
+
+// Virtual para obter todas as roles do usuário (role principal + roles adicionais)
+UsuarioSchema.virtual('todasRoles').get(function() {
+    const roles = new Set([this.role]); // Começar com a role principal
+    
+    // Adicionar roles adicionais se existirem
+    if (this.roles && Array.isArray(this.roles)) {
+        this.roles.forEach(role => roles.add(role));
+    }
+    
+    // Se é AdminMaster, adicionar todas as permissões
+    if (this.isAdminMaster) {
+        roles.add('adminMaster');
+        roles.add('admin');
+        roles.add('medico');
+        roles.add('tecnico');
+        roles.add('recepcionista');
+    }
+    
+    return Array.from(roles);
+});
+
+// Método para verificar se o usuário tem uma role específica
+UsuarioSchema.methods.temRole = function(roleVerificar) {
+    return this.todasRoles.includes(roleVerificar);
+};
+
+// Método para verificar se o usuário tem pelo menos uma das roles
+UsuarioSchema.methods.temAlgumaRole = function(rolesVerificar) {
+    if (!Array.isArray(rolesVerificar)) {
+        rolesVerificar = [rolesVerificar];
+    }
+    return rolesVerificar.some(role => this.temRole(role));
+};
+
+// Método para adicionar uma role adicional
+UsuarioSchema.methods.adicionarRole = function(novaRole) {
+    const rolesValidas = ['medico', 'tecnico', 'admin', 'adminMaster', 'recepcionista'];
+    
+    if (!rolesValidas.includes(novaRole)) {
+        throw new Error('Role inválida');
+    }
+    
+    if (!this.roles) {
+        this.roles = [];
+    }
+    
+    // Não adicionar se já é a role principal ou se já existe nas roles adicionais
+    if (this.role !== novaRole && !this.roles.includes(novaRole)) {
+        this.roles.push(novaRole);
+    }
+};
+
+// Método para remover uma role adicional
+UsuarioSchema.methods.removerRole = function(roleRemover) {
+    if (this.role === roleRemover) {
+        throw new Error('Não é possível remover a role principal. Altere a role principal primeiro.');
+    }
+    
+    if (this.roles && Array.isArray(this.roles)) {
+        this.roles = this.roles.filter(role => role !== roleRemover);
+    }
+};
+
+// Método para verificar se o usuário é admin de um tenant específico
+UsuarioSchema.methods.isAdminDoTenant = function(tenantId) {
+    if (this.isAdminMaster) return true; // AdminMaster tem acesso a tudo
+    
+    if (!this.admin_tenants || !Array.isArray(this.admin_tenants)) return false;
+    
+    return this.admin_tenants.some(adminTenant => 
+        adminTenant.toString() === tenantId.toString()
+    );
+};
+
+// Método para obter tenants onde o usuário é admin
+UsuarioSchema.methods.getTenantsAdmin = function() {
+    if (this.isAdminMaster) {
+        return this.tenant_id; // AdminMaster é admin de todos os tenants que tem acesso
+    }
+    return this.admin_tenants || [];
+};
+
+// Método para adicionar tenant admin
+UsuarioSchema.methods.adicionarTenantAdmin = function(tenantId) {
+    if (!this.admin_tenants) {
+        this.admin_tenants = [];
+    }
+    
+    // Verificar se o usuário tem acesso ao tenant
+    const temAcesso = this.tenant_id.some(tenant => 
+        tenant.toString() === tenantId.toString()
+    );
+    
+    if (!temAcesso) {
+        throw new Error('Usuário não tem acesso a este tenant');
+    }
+    
+    // Adicionar se não existir
+    const jaEAdmin = this.admin_tenants.some(adminTenant => 
+        adminTenant.toString() === tenantId.toString()
+    );
+    
+    if (!jaEAdmin) {
+        this.admin_tenants.push(tenantId);
+    }
+};
+
+// Método para remover tenant admin
+UsuarioSchema.methods.removerTenantAdmin = function(tenantId) {
+    if (this.admin_tenants && Array.isArray(this.admin_tenants)) {
+        this.admin_tenants = this.admin_tenants.filter(adminTenant => 
+            adminTenant.toString() !== tenantId.toString()
+        );
+    }
 };
 
 module.exports = mongoose.model('Usuario', UsuarioSchema, 'usuarios');

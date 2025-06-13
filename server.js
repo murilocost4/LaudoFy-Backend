@@ -156,6 +156,8 @@ mongoose.connect(process.env.MONGO_URI, {
   app.use('/api/laudos', authMiddleware, require('./src/routes/laudoRoutes'));
   app.use('/api/pacientes', authMiddleware, require('./src/routes/pacienteRoutes'));
   app.use('/api/usuarios', authMiddleware, require('./src/routes/usuarioRoutes'));
+  app.use('/api/user-roles', authMiddleware, require('./src/routes/userRoleRoutes'));
+  app.use('/api/tenant-admin', authMiddleware, require('./src/routes/tenantAdminRoutes'));
   app.use('/api/estatisticas', authMiddleware, require('./src/routes/estatisticaRoutes'));
   app.use('/api/financeiro', authMiddleware, require('./src/routes/valorLaudoRoutes'));
   app.use('/api/financeiro', authMiddleware, require('./src/routes/financeiroRoutes'));
